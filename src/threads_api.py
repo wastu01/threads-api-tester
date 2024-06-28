@@ -1,6 +1,6 @@
 from ctypes.wintypes import SHORT
 from re import S
-import requests
+import requests # type: ignore
 import html
 
 class ThreadAPI:
@@ -22,9 +22,9 @@ class ThreadAPI:
         self.CLIENT_SECRET = client_secret
         self.REDIRECT_URI = html.escape(self.REDIRECT_URI)
 
-        print(f"Client ID: {self.CLIENT_ID}")
-        print(f"Client Secret: {self.CLIENT_SECRET}")
-        print(f"Redirect URI: {self.REDIRECT_URI}")
+        # print(f"Client ID: {self.CLIENT_ID}")
+        # print(f"Client Secret: {self.CLIENT_SECRET}")
+        # print(f"Redirect URI: {self.REDIRECT_URI}")
 
     def get_auth_url(self) -> str:
         return (
@@ -36,7 +36,7 @@ class ThreadAPI:
         )
     
     def set_auth_code(self, code: str):
-        print(f"Received auth code: {code}")
+        print(f"Received auth code")
         self.AUTH_CODE = code
 
     def get_user_info(self, user_id: int = 0) -> dict:
@@ -68,15 +68,18 @@ class ThreadAPI:
             'redirect_uri': self.REDIRECT_URI,
             'code': self.AUTH_CODE
         }
+        # print(f"Payload for short-lived token: {payload}")
+
         try:
             response = requests.post(url, data=payload)
             response.raise_for_status()
             token_response = response.json()
+            # print(token_response)
             self.SHORT_LIVED_TOKEN = token_response.get("access_token")
             self.USER_ID = token_response.get("user_id")
 
-            print(f"Short-lived token: {self.SHORT_LIVED_TOKEN}")
-            print(f"User ID: {self.USER_ID}")
+            # print(f"Short-lived token: {self.SHORT_LIVED_TOKEN}")
+            # print(f"User ID: {self.USER_ID}")
 
             return str(self.SHORT_LIVED_TOKEN)
         except requests.exceptions.RequestException as e:
@@ -91,12 +94,15 @@ class ThreadAPI:
             return str(self.LONG_LIVED_TOKEN)
         
         url = f"{self.API_BASE_URL}/access_token?access_token={self.SHORT_LIVED_TOKEN}&client_secret={self.CLIENT_SECRET}&grant_type=th_exchange_token"
+
+
         try:
             response = requests.get(url)
             response.raise_for_status()
             token_response = response.json()
+            # print(f"Exchange token url:{url}")
+            # print(f"Token response:{token_response}")
             self.LONG_LIVED_TOKEN = token_response.get("access_token")
-            print(f"Long-lived token: {self.LONG_LIVED_TOKEN}")
 
             return str(self.LONG_LIVED_TOKEN)
         except requests.exceptions.RequestException as e:
@@ -110,18 +116,22 @@ class ThreadAPI:
         if not self.LONG_LIVED_TOKEN:
             return {"error": "No long-lived access token available"}
         
-        limit = 6
+        limit = None
         fields = "id,media_product_type,media_type,media_url,permalink,owner,username,text,timestamp,shortcode,thumbnail_url,children,is_quote_post"
         url = f"{self.API_BASE_URL}/{self.USER_ID}/threads?access_token={self.LONG_LIVED_TOKEN}&limit={limit}&fields={fields}"
         try:
             response = requests.get(url)
             response.raise_for_status()
+            # 寫入文件
+            with open("response_data.txt", "w") as file:
+                file.write(str(response.json()))
             return response.json()
         except requests.exceptions.RequestException as e:
             print(f"HTTP request error: {e}")
             return {"error": str(e)}
 
     def upload_image(self, image_url: str, caption: str) -> dict:
+        
         if not self.LONG_LIVED_TOKEN:
             return {"error": "No long-lived access token available"}
         
@@ -136,9 +146,17 @@ class ThreadAPI:
             if container_id:
                 publish_response = requests.post(f"{publish_url}&creation_id={container_id}")
                 publish_response.raise_for_status()
+                print(publish_response.json())
                 return publish_response.json()
+                
             else:
                 return {"error": "Failed to create media container"}
         except requests.exceptions.RequestException as e:
             print(f"HTTP request error: {e}")
             return {"error": f"HTTP request error: {e}\n\n{response.text}"}
+    # def upload_video(self, image_url: str, caption: str) -> dict:
+    #     if not self.LONG_LIVED_TOKEN:
+    #         return {"error": "No long-lived access token available"}
+    #     create_container_url = f"{self.API_BASE_URL}/{self.USER_ID}/threads?media_type=IMAGE&image_url={image_url}&text={caption}&access_token={self.LONG_LIVED_TOKEN}"
+    #     publish_url = f"{self.API_BASE_URL}/{self.USER_ID}/threads_publish?access_token={self.LONG_LIVED_TOKEN}"
+    

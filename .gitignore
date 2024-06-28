@@ -2,3 +2,8 @@
 .env
 static/*
 **/__pycache__/
+.DS_Store
+.vscode/settings.json
+Pipfile
+curl-terminal-test.txt
+response_data.txt

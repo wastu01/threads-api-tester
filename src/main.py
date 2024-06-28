@@ -4,8 +4,8 @@ import threading
 import time
 import webbrowser
 import os
-from flask import Flask
-from dotenv import load_dotenv
+from flask import Flask # type: ignore
+from dotenv import load_dotenv # type: ignore
 from src.config import Config
 from src.routes import setup_routes
 from src.utils import create_self_signed_cert, start_flask_server
@@ -35,6 +35,7 @@ def main():
     app = Flask(__name__, template_folder='../public', static_folder='../static')
 
     setup_routes(app, config, threadsAPI)
+    # 啟動
     
     server_thread = threading.Thread(target=start_flask_server, args=(app, config))
     server_thread.daemon = True
